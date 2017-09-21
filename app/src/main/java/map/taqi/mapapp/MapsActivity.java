@@ -1,20 +1,27 @@
 package map.taqi.mapapp;
 
 import android.Manifest;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.net.wifi.WifiManager;
 import android.os.Build;
+import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
-import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AlertDialog;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.Toast;
 
-import map.taqi.mapapp.POJO.Example;
-
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdView;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -29,18 +36,17 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.oguzdev.circularfloatingactionmenu.library.FloatingActionButton;
+import com.oguzdev.circularfloatingactionmenu.library.FloatingActionMenu;
+import com.oguzdev.circularfloatingactionmenu.library.SubActionButton;
 
-import com.google.android.gms.ads.AdListener;
-import com.google.android.gms.ads.AdRequest;
-import com.google.android.gms.ads.AdView;
-
-import java.util.HashMap;
-
+import map.taqi.mapapp.POJO.Example;
 import retrofit.Call;
 import retrofit.Callback;
 import retrofit.GsonConverterFactory;
 import retrofit.Response;
 import retrofit.Retrofit;
+
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback,
         GoogleApiClient.ConnectionCallbacks,
@@ -56,15 +62,25 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     Marker mCurrLocationMarker;
     LocationRequest mLocationRequest;
 
+
+
+    private static final int MY_PERMISSION_REQUEST_FINE_LOCATION = 101;
+    private static final int MY_PERMISSION_REQUEST_COARSE_LOCATION = 102;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
 
+        if (!isConnected(MapsActivity.this)) buildDialog(MapsActivity.this).show();
+        else {
+            Toast.makeText(MapsActivity.this, "Welcome!! tap the button to find location", Toast.LENGTH_SHORT).show();
+
+        }
+
 
         AdView mAdView;
         Button btnFullscreenAd;
-
 
         mAdView = (AdView) findViewById(R.id.adView);
         AdRequest adRequest = new AdRequest.Builder()
@@ -72,34 +88,279 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mAdView.loadAd(adRequest);
 
 
+        // Create an icon
+        ImageView icon = new ImageView(this);
+        icon.setImageResource(R.drawable.actionmenu);
 
 
-//    @Override
-//    public void onPause() {
-//        if (mAdView != null) {
-//            mAdView.pause();
-//        }
-//        super.onPause();
-//    }
-//
-//    @Override
-//    public void onResume() {
-//        super.onResume();
-//        if (mAdView != null) {
-//            mAdView.resume();
-//        }
-//    }
-//
-//    @Override
-//    public void onDestroy() {
-//        if (mAdView != null) {
-//            mAdView.destroy();
-//        }
-//        super.onDestroy();
+        ImageView icon2 = new ImageView(this);
+        icon2.setImageResource(R.drawable.mapmenu);
 
 
-        if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            checkLocationPermission();
+        final FloatingActionButton actionButton = new FloatingActionButton.Builder(this)
+                .setContentView(icon)
+                .setPosition(7)
+                .build();
+
+
+        SubActionButton.Builder itemBuilder = new SubActionButton.Builder(this);
+
+
+        // repeat many times:
+        final ImageView Atm = new ImageView(this);
+        Atm.setImageResource(R.drawable.atm2);
+
+
+        ImageView Medical = new ImageView(this);
+        Medical.setImageResource(R.drawable.medicl);
+
+
+        ImageView University = new ImageView(this);
+        University.setImageResource(R.drawable.school);
+
+        ImageView Resturants = new ImageView(this);
+        Resturants.setImageResource(R.drawable.rest2);
+
+        ImageView Bank = new ImageView(this);
+        Bank.setImageResource(R.drawable.bank);
+
+        ImageView PoliceStation = new ImageView(this);
+        PoliceStation.setImageResource(R.drawable.police);
+
+
+        ImageView Airport = new ImageView(this);
+        Airport.setImageResource(R.drawable.airport);
+
+        final SubActionButton atmbtn = itemBuilder.setContentView(Atm).build();
+        SubActionButton medbtn = itemBuilder.setContentView(Medical).build();
+        SubActionButton universitybtn = itemBuilder.setContentView(University).build();
+        SubActionButton resturantbtn = itemBuilder.setContentView(Resturants).build();
+        SubActionButton bankbtn = itemBuilder.setContentView(Bank).build();
+        SubActionButton policestationbtn = itemBuilder.setContentView(PoliceStation).build();
+        SubActionButton airportbtn = itemBuilder.setContentView(Airport).build();
+
+
+        final FloatingActionMenu actionMenu = new FloatingActionMenu.Builder(this)
+                .addSubActionView(atmbtn)
+                .addSubActionView(medbtn)
+                .addSubActionView(universitybtn)
+                .addSubActionView(resturantbtn)
+                .addSubActionView(bankbtn)
+                .addSubActionView(policestationbtn)
+                .addSubActionView(airportbtn)
+                .attachTo(actionButton)
+                .enableAnimations()
+                .setStartAngle(90)
+                .setEndAngle(-90)
+                .build();
+
+        atmbtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                build_retrofit_and_get_response("atm");
+                actionMenu.close(true);
+
+                if (!isConnected(MapsActivity.this))
+                    Toast.makeText(getApplicationContext(), "you are not connected!Please turn on the internet!!", Toast.LENGTH_LONG).show();
+                else {
+                    Toast.makeText(MapsActivity.this, "Searching Nearby ATM Booths", Toast.LENGTH_SHORT).show();
+
+                }
+
+
+            }
+        });
+
+
+        medbtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                build_retrofit_and_get_response("hospital");
+                actionMenu.close(true);
+
+                if (!isConnected(MapsActivity.this))
+                    Toast.makeText(getApplicationContext(), "you are not connected!Please turn on the internet!!", Toast.LENGTH_LONG).show();
+                else {
+                    Toast.makeText(MapsActivity.this, "Searching Nearby hospitals", Toast.LENGTH_SHORT).show();
+
+                }
+
+
+            }
+        });
+
+        universitybtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                build_retrofit_and_get_response("university");
+                actionMenu.close(true);
+
+                if (!isConnected(MapsActivity.this))
+                    Toast.makeText(getApplicationContext(), "you are not connected!Please turn on the internet!!", Toast.LENGTH_LONG).show();
+                else {
+                    Toast.makeText(MapsActivity.this, "Searching Nearby universities", Toast.LENGTH_SHORT).show();
+
+                }
+
+
+            }
+        });
+
+        resturantbtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                build_retrofit_and_get_response("restaurant");
+                actionMenu.close(true);
+
+                if (!isConnected(MapsActivity.this))
+                    Toast.makeText(getApplicationContext(), "you are not connected!Please turn on the internet!!", Toast.LENGTH_LONG).show();
+                else {
+                    Toast.makeText(MapsActivity.this, "Searching Nearby restaurants", Toast.LENGTH_SHORT).show();
+
+                }
+
+
+            }
+        });
+
+        bankbtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                build_retrofit_and_get_response("bank");
+                actionMenu.close(true);
+
+                if (!isConnected(MapsActivity.this))
+                    Toast.makeText(getApplicationContext(), "you are not connected!Please turn on the internet!!", Toast.LENGTH_LONG).show();
+                else {
+                    Toast.makeText(MapsActivity.this, "Searching Nearby bank", Toast.LENGTH_SHORT).show();
+
+                }
+
+
+            }
+        });
+
+        policestationbtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                build_retrofit_and_get_response("police");
+                actionMenu.close(true);
+
+                if (!isConnected(MapsActivity.this))
+                    Toast.makeText(getApplicationContext(), "you are not connected!Please turn on the internet!!", Toast.LENGTH_LONG).show();
+                else {
+                    Toast.makeText(MapsActivity.this, "Searching Nearby police stations", Toast.LENGTH_SHORT).show();
+
+                }
+
+
+            }
+        });
+
+
+        airportbtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                build_retrofit_and_get_response("airport");
+                actionMenu.close(true);
+
+                if (!isConnected(MapsActivity.this))
+                    Toast.makeText(getApplicationContext(), "you are not connected!Please turn on the internet!!", Toast.LENGTH_LONG).show();
+                else {
+                    Toast.makeText(MapsActivity.this, "Searching Nearby airport", Toast.LENGTH_SHORT).show();
+
+                }
+
+
+            }
+        });
+
+
+        FloatingActionButton mapButton = new FloatingActionButton.Builder(this)
+                .setContentView(icon2)
+                .setPosition(6)
+                .build();
+
+
+        SubActionButton.Builder mapitemBuilder = new SubActionButton.Builder(this);
+
+
+        // repeat many times:
+        ImageView normalMap = new ImageView(this);
+        normalMap.setImageResource(R.drawable.submenu);
+
+        ImageView hybridMap = new ImageView(this);
+        hybridMap.setImageResource(R.drawable.hybrid);
+
+        ImageView satelliteMap = new ImageView(this);
+        satelliteMap.setImageResource(R.drawable.sattelite);
+
+        ImageView terrainMap = new ImageView(this);
+        terrainMap.setImageResource(R.drawable.terrain);
+
+
+        SubActionButton normalMapbtn = mapitemBuilder.setContentView(normalMap).build();
+        SubActionButton hybridbtn = mapitemBuilder.setContentView(hybridMap).build();
+        SubActionButton satelitebtn = mapitemBuilder.setContentView(satelliteMap).build();
+        SubActionButton terrainbtn = mapitemBuilder.setContentView(terrainMap).build();
+
+
+        //attach the sub buttons to the main button
+        final FloatingActionMenu mapMenu = new FloatingActionMenu.Builder(this)
+                .addSubActionView(normalMapbtn)
+                .addSubActionView(hybridbtn)
+                .addSubActionView(satelitebtn)
+                .addSubActionView(terrainbtn)
+                .attachTo(mapButton)
+                .enableAnimations()
+                .setStartAngle(0)
+                .setEndAngle(-90)
+                .build();
+
+        normalMapbtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
+                mapMenu.close(true);
+                Toast.makeText(getApplication(), "Converted to normal map", Toast.LENGTH_LONG).show();
+            }
+        });
+
+
+        hybridbtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mMap.setMapType(GoogleMap.MAP_TYPE_HYBRID);
+                mapMenu.close(true);
+                Toast.makeText(getApplication(), "Converted to hybrid map", Toast.LENGTH_LONG).show();
+
+            }
+        });
+
+        satelitebtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mMap.setMapType(GoogleMap.MAP_TYPE_SATELLITE);
+                mapMenu.close(true);
+                Toast.makeText(getApplication(), "Converted to satellite map", Toast.LENGTH_LONG).show();
+            }
+        });
+
+        terrainbtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mMap.setMapType(GoogleMap.MAP_TYPE_TERRAIN);
+                mapMenu.close(true);
+                Toast.makeText(getApplication(), "Converted to terrain map", Toast.LENGTH_LONG).show();
+            }
+        });
+
+
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, MY_PERMISSION_REQUEST_FINE_LOCATION);
+        } else {
+
         }
 
         //show error dialog if Google Play Services not available
@@ -129,19 +390,48 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         return true;
     }
 
-    /**
-     * Manipulates the map once available.
-     * This callback is triggered when the map is ready to be used.
-     * This is where we can add markers or lines, add listeners or move the camera. In this case,
-     * we just add a marker near Sydney, Australia.
-     * If Google Play services is not installed on the device, the user will be prompted to install
-     * it inside the SupportMapFragment. This method will only be triggered once the user has
-     * installed Google Play services and returned to the app.
-     */
+
+    public boolean isConnected(Context context) {
+
+        ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo netinfo = cm.getActiveNetworkInfo();
+
+        if (netinfo != null && netinfo.isConnectedOrConnecting()) {
+            android.net.NetworkInfo wifi = cm.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+            android.net.NetworkInfo mobile = cm.getNetworkInfo(ConnectivityManager.TYPE_MOBILE);
+
+            if ((mobile != null && mobile.isConnectedOrConnecting()) || (wifi != null && wifi.isConnectedOrConnecting()))
+                return true;
+            else return false;
+        } else
+            return false;
+    }
+
+    public AlertDialog.Builder buildDialog(Context c) {
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(c);
+        builder.setTitle("No Internet Connection");
+        builder.setMessage("You need to have Mobile Data or wifi to access this.Please turn on GPS & internet");
+
+        builder.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+
+                //finish();
+                WifiManager wifi = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+                wifi.setWifiEnabled(true);
+            }
+        });
+
+        return builder;
+    }
+
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
         mMap.setMapType(GoogleMap.MAP_TYPE_HYBRID);
+
 
         //Initialize Google Play Services
         if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -156,13 +446,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             mMap.setMyLocationEnabled(true);
         }
 
-        Button btnRestaurant = (Button) findViewById(R.id.btnAtm);
-        btnRestaurant.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                build_retrofit_and_get_response("atm");
-            }
-        });
+        mMap.setMyLocationEnabled(true);
+        mMap.getUiSettings().setZoomGesturesEnabled(true);
+        mMap.getUiSettings().setZoomControlsEnabled(true);
 
 
     }
@@ -201,10 +487,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         // Adding Marker to the Camera.
                         Marker m = mMap.addMarker(markerOptions);
                         // Adding colour to the marker
-                        markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED));
+                        markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN));
                         // move map camera
                         mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
-                        mMap.animateCamera(CameraUpdateFactory.zoomTo(11));
+                        mMap.animateCamera(CameraUpdateFactory.zoomTo(13));
+
+
                     }
                 } catch (Exception e) {
                     Log.d("onResponse", "There is an error");
@@ -233,13 +521,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void onConnected(Bundle bundle) {
         mLocationRequest = new LocationRequest();
         mLocationRequest.setInterval(1000);
-        mLocationRequest.setFastestInterval(1000);
-        mLocationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
-        if (ContextCompat.checkSelfPermission(this,
-                Manifest.permission.ACCESS_FINE_LOCATION)
-                == PackageManager.PERMISSION_GRANTED) {
-            LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
+        mLocationRequest.setFastestInterval(5 * 1000);
+        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, MY_PERMISSION_REQUEST_FINE_LOCATION);
+            }
+            return;
+
+
         }
+        LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
     }
 
     @Override
@@ -262,7 +556,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
         MarkerOptions markerOptions = new MarkerOptions();
         markerOptions.position(latLng);
-        markerOptions.title("Current Position");
+        markerOptions.title("Hi! you are here");
 
         // Adding colour to the marker
         markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_MAGENTA));
@@ -277,6 +571,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         Log.d("onLocationChanged", String.format("latitude:%.3f longitude:%.3f", latitude, longitude));
 
         Log.d("onLocationChanged", "Exit");
+
+        //stop location updates
+        if (mGoogleApiClient != null) {
+            LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
+        }
     }
 
     @Override
@@ -284,7 +583,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     }
 
-    public static final int MY_PERMISSIONS_REQUEST_LOCATION = 99;
 
     public boolean checkLocationPermission() {
         if (ContextCompat.checkSelfPermission(this,
@@ -295,21 +593,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             if (ActivityCompat.shouldShowRequestPermissionRationale(this,
                     Manifest.permission.ACCESS_FINE_LOCATION)) {
 
-                // Show an explanation to the user *asynchronously* -- don't block
-                // this thread waiting for the user's response! After the user
-                // sees the explanation, try again to request the permission.
 
                 //Prompt the user once explanation has been shown
                 ActivityCompat.requestPermissions(this,
                         new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                        MY_PERMISSIONS_REQUEST_LOCATION);
+                        MY_PERMISSION_REQUEST_FINE_LOCATION);
 
 
             } else {
                 // No explanation needed, we can request the permission.
                 ActivityCompat.requestPermissions(this,
                         new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                        MY_PERMISSIONS_REQUEST_LOCATION);
+                        MY_PERMISSION_REQUEST_COARSE_LOCATION);
             }
             return false;
         } else {
@@ -317,11 +612,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
+
     @Override
     public void onRequestPermissionsResult(int requestCode,
                                            String permissions[], int[] grantResults) {
         switch (requestCode) {
-            case MY_PERMISSIONS_REQUEST_LOCATION: {
+            case MY_PERMISSION_REQUEST_FINE_LOCATION: {
                 // If request is cancelled, the result arrays are empty.
                 if (grantResults.length > 0
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
@@ -335,7 +631,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         if (mGoogleApiClient == null) {
                             buildGoogleApiClient();
                         }
-                        mMap.setMyLocationEnabled(true);
+
+
                     }
 
                 } else {
@@ -344,12 +641,31 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     Toast.makeText(this, "permission denied", Toast.LENGTH_LONG).show();
                 }
                 return;
+
             }
 
-            // other 'case' lines to check for other permissions this app might request.
-            // You can add here other case statements according to your requirement.
+            case MY_PERMISSION_REQUEST_COARSE_LOCATION:
+                break;
+
+
         }
-
-
     }
+
+
+    @Override
+    public void onBackPressed() {
+        new AlertDialog.Builder(this)
+                .setMessage("Are you sure to quit??")
+                .setCancelable(false)
+                .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        MapsActivity.this.finish();
+                    }
+                })
+                .setNegativeButton("No", null)
+                .show();
+    }
+
 }
+
+

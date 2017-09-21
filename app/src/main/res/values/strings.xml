@@ -1,10 +1,10 @@
 <resources>
-    <string name="app_name">MAPapp</string>
-    <string name="title_activity_maps">Map</string>
+    <string name="app_name">Onetouchnearby Mapapp</string>
+    <string name="title_activity_maps">Mapapp</string>
 
 
     <!-- AdMob ad unit IDs -->
-    <string name="banner_home_footer">ca-app-pub-0664570763252260/3326522424</string>
+    <string name="banner_home_footer">ca-app-pub-7001294398118996/9044474878</string>
 
 
 </resources>

@@ -2,7 +2,7 @@ apply plugin: 'com.android.application'
 
 android {
     compileSdkVersion 24
-    buildToolsVersion "24.0.3"
+    buildToolsVersion '25.0.0'
     defaultConfig {
         applicationId "map.taqi.mapapp"
         minSdkVersion 15
@@ -25,13 +25,16 @@ dependencies {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
     compile 'com.android.support:appcompat-v7:24.2.1'
-    compile 'com.google.android.gms:play-services:9.6.1'
     testCompile 'junit:junit:4.12'
     compile fileTree(dir: 'libs', include: ['*.jar'])
     testCompile 'junit:junit:4.12'
-    compile 'com.google.android.gms:play-services:8.4.0'
+    compile 'com.google.android.gms:play-services:11.0.0'
     compile 'com.squareup.retrofit:retrofit:2.0.0-beta2'
     compile 'com.google.code.gson:gson:1.7.2'
     compile 'com.squareup.retrofit:converter-gson:2.0.0-beta2'
     compile 'com.squareup.okhttp:okhttp:2.4.0'
+    compile 'com.oguzdev:CircularFloatingActionMenu:1.0.2'
+    compile 'com.google.android.gms:play-services-ads:11.0.0'
+
+    
 }
